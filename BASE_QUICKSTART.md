@@ -39,7 +39,7 @@ node test-setup.js
 npm start
 ```
 
-## 4. Webhook Testing auf Base
+## 4. Webhook Testing auf Base (mit Promise Chain)
 
 ```bash
 # Gesundheitsprüfung
@@ -55,14 +55,26 @@ curl -X POST https://token-transfer-ashen.vercel.app/transfer-token \
     "amount": "5",
     "wallet": "0xeF54a1003C7BcbC5706B96B2839A76D2A4C68bCF"
   }'
+
+# Mehrere Transaktionen nacheinander (Promise Chain verarbeitet sequenziell)
+curl -X POST https://token-transfer-ashen.vercel.app/transfer-token \
+  -H "Content-Type: application/json" \
+  -d '{"amount": "3", "wallet": "0xeF54a1003C7BcbC5706B96B2839A76D2A4C68bCF"}' && \
+curl -X POST https://token-transfer-ashen.vercel.app/transfer-token \
+  -H "Content-Type: application/json" \
+  -d '{"amount": "2", "wallet": "0xeF54a1003C7BcbC5706B96B2839A76D2A4C68bCF"}' && \
+curl -X POST https://token-transfer-ashen.vercel.app/transfer-token \
+  -H "Content-Type: application/json" \
+  -d '{"amount": "1", "wallet": "0xeF54a1003C7BcbC5706B96B2839A76D2A4C68bCF"}'
 ```
 
 ## 5. Erwartete Antworten
 
-### Erfolgreiche Transaktion (mit ETH-Bonus):
+### Erfolgreiche Transaktion (mit ETH-Bonus und sequenzieller Verarbeitung):
 ```json
 {
   "success": true,
+  "message": "Transaktion erfolgreich verarbeitet",
   "tokenTransaction": {
     "transactionHash": "0x1234567890abcdef...",
     "amount": "5",

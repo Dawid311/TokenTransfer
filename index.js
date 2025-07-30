@@ -38,6 +38,24 @@ web3.eth.accounts.wallet.add(account);
 const TOKEN_ADDRESS = process.env.TOKEN_CONTRACT_ADDRESS || '0x69eFD833288605f320d77eB2aB99DDE62919BbC1';
 const TOKEN_DECIMALS = 2; // Wie angegeben
 
+// 🔗 Promise Chain für sequenzielle Transaktionsverarbeitung
+let transactionChain = Promise.resolve();
+
+// Hilfsfunktion: Transaktion zur Chain hinzufügen
+function addToTransactionChain(transactionData) {
+    const promise = transactionChain
+        .then(() => processTransaction(transactionData))
+        .catch(error => {
+            console.error('Transaction in chain failed:', error.message);
+            throw error; // Re-throw für HTTP Response
+        });
+    
+    // Chain für nächste Transaktion aktualisieren
+    transactionChain = promise.catch(() => {}); // Chain continues even if this transaction fails
+    
+    return promise;
+}
+
 // ERC-20 ABI (minimale Version für Transfer)
 const ERC20_ABI = [
     {
@@ -105,87 +123,97 @@ app.post('/transfer-token', async (req, res) => {
             });
         }
 
-        console.log(`Token-Transfer initiiert: ${amount} Tokens an ${wallet}`);
+        console.log(`🔗 Transaktion zur Chain hinzugefügt: ${amount} Tokens an ${wallet}`);
 
-        // Amount in Token-Units konvertieren (mit 2 Decimals)
-        const tokenAmount = parseAmount(amount);
-
-        // Gas-Schätzung für die Transaktion
-        const gasEstimate = await tokenContract.methods
-            .transfer(wallet, tokenAmount)
-            .estimateGas({ from: account.address });
-
-        // Transaktion vorbereiten
-        const gasPrice = process.env.GAS_PRICE ? 
-            web3.utils.toWei(process.env.GAS_PRICE, 'gwei') : 
-            await web3.eth.getGasPrice();
-
-        const tx = {
-            from: account.address,
-            to: TOKEN_ADDRESS,
-            data: tokenContract.methods.transfer(wallet, tokenAmount).encodeABI(),
-            gas: Math.floor(Number(gasEstimate) * 1.2), // 20% Puffer, explizite Number-Konvertierung
-            gasPrice: gasPrice.toString() // Explizite String-Konvertierung
-        };
-
-        // Transaktion signieren und senden
-        const signedTx = await web3.eth.accounts.signTransaction(tx, '0x' + privateKey);
-        const receipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
-
-        console.log(`Token-Transaktion erfolgreich: ${receipt.transactionHash}`);
-
-        // Nach erfolgreichem Token-Transfer: 0.000001 ETH senden
-        console.log(`Sende zusätzlich 0.000001 ETH an ${wallet}...`);
+        // 🔗 Transaktion zur Promise Chain hinzufügen
+        const result = await addToTransactionChain({ amount, wallet });
         
-        const ethAmount = web3.utils.toWei('0.000001', 'ether');
-        const ethGasEstimate = await web3.eth.estimateGas({
-            from: account.address,
-            to: wallet,
-            value: ethAmount
-        });
-
-        const ethTx = {
-            from: account.address,
-            to: wallet,
-            value: ethAmount,
-            gas: Math.floor(Number(ethGasEstimate) * 1.2), // 20% Puffer
-            gasPrice: gasPrice.toString()
-        };
-
-        const signedEthTx = await web3.eth.accounts.signTransaction(ethTx, '0x' + privateKey);
-        const ethReceipt = await web3.eth.sendSignedTransaction(signedEthTx.rawTransaction);
-
-        console.log(`ETH-Transaktion erfolgreich: ${ethReceipt.transactionHash}`);
-
         res.json({
             success: true,
-            tokenTransaction: {
-                transactionHash: receipt.transactionHash,
-                amount: amount,
-                recipient: wallet,
-                gasUsed: Number(receipt.gasUsed).toString(),
-                blockNumber: Number(receipt.blockNumber).toString()
-            },
-            ethTransaction: {
-                transactionHash: ethReceipt.transactionHash,
-                amount: "0.000001",
-                recipient: wallet,
-                gasUsed: Number(ethReceipt.gasUsed).toString(),
-                blockNumber: Number(ethReceipt.blockNumber).toString()
-            }
+            message: 'Transaktion erfolgreich verarbeitet',
+            ...result
         });
 
     } catch (error) {
-        console.error('Fehler beim Token-Transfer:', error);
-        
-        const errorMessage = handleWeb3Error(error);
-        
+        console.error('Transfer-Token Fehler:', error.message);
         res.status(500).json({
             success: false,
-            error: errorMessage
+            error: handleWeb3Error(error)
         });
     }
 });
+
+// 🔗 Haupt-Transaktions-Verarbeitungsfunktion
+async function processTransaction({ amount, wallet }) {
+    console.log(`⚡ Verarbeite Transaktion: ${amount} Tokens an ${wallet}`);
+
+    // Amount in Token-Units konvertieren (mit 2 Decimals)
+    const tokenAmount = parseAmount(amount);
+
+    // Gas-Schätzung für die Transaktion
+    const gasEstimate = await tokenContract.methods
+        .transfer(wallet, tokenAmount)
+        .estimateGas({ from: account.address });
+
+    // Transaktion vorbereiten
+    const gasPrice = process.env.GAS_PRICE ? 
+        web3.utils.toWei(process.env.GAS_PRICE, 'gwei') : 
+        await web3.eth.getGasPrice();
+
+    const tx = {
+        from: account.address,
+        to: TOKEN_ADDRESS,
+        data: tokenContract.methods.transfer(wallet, tokenAmount).encodeABI(),
+        gas: Math.floor(Number(gasEstimate) * 1.2), // 20% Puffer, explizite Number-Konvertierung
+        gasPrice: gasPrice.toString() // Explizite String-Konvertierung
+    };
+
+    // Transaktion signieren und senden
+    const signedTx = await web3.eth.accounts.signTransaction(tx, '0x' + privateKey);
+    const receipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
+
+    console.log(`✅ Token-Transaktion erfolgreich: ${receipt.transactionHash}`);
+
+    // Nach erfolgreichem Token-Transfer: 0.000001 ETH senden
+    console.log(`💰 Sende zusätzlich 0.000001 ETH an ${wallet}...`);
+    
+    const ethAmount = web3.utils.toWei('0.000001', 'ether');
+    const ethGasEstimate = await web3.eth.estimateGas({
+        from: account.address,
+        to: wallet,
+        value: ethAmount
+    });
+
+    const ethTx = {
+        from: account.address,
+        to: wallet,
+        value: ethAmount,
+        gas: Math.floor(Number(ethGasEstimate) * 1.2), // 20% Puffer
+        gasPrice: gasPrice.toString()
+    };
+
+    const signedEthTx = await web3.eth.accounts.signTransaction(ethTx, '0x' + privateKey);
+    const ethReceipt = await web3.eth.sendSignedTransaction(signedEthTx.rawTransaction);
+
+    console.log(`✅ ETH-Transaktion erfolgreich: ${ethReceipt.transactionHash}`);
+
+    return {
+        tokenTransaction: {
+            transactionHash: receipt.transactionHash,
+            amount: amount,
+            recipient: wallet,
+            gasUsed: Number(receipt.gasUsed).toString(),
+            blockNumber: Number(receipt.blockNumber).toString()
+        },
+        ethTransaction: {
+            transactionHash: ethReceipt.transactionHash,
+            amount: "0.000001",
+            recipient: wallet,
+            gasUsed: Number(ethReceipt.gasUsed).toString(),
+            blockNumber: Number(ethReceipt.blockNumber).toString()
+        }
+    };
+}
 
 // Balance-Check Endpunkt
 app.get('/balance', async (req, res) => {
