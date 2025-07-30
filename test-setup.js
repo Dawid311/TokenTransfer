@@ -12,10 +12,17 @@ async function testConnection() {
         console.log('✅ Environment variables are valid\n');
         
         // 2. Web3 Verbindung testen
-        console.log('2. Testing Web3 connection...');
+        console.log('2. Testing Web3 connection to Base Chain...');
         const web3 = new Web3(process.env.RPC_URL);
         const blockNumber = await web3.eth.getBlockNumber();
-        console.log(`✅ Connected to Ethereum network. Current block: ${blockNumber}\n`);
+        const chainId = await web3.eth.getChainId();
+        
+        // Base Chain IDs: 8453 (Mainnet), 84532 (Sepolia Testnet)
+        const networkName = chainId === 8453n ? 'Base Mainnet' : 
+                           chainId === 84532n ? 'Base Sepolia Testnet' : 
+                           `Unknown Base Network (Chain ID: ${chainId})`;
+        
+        console.log(`✅ Connected to ${networkName}. Current block: ${blockNumber}\n`);
         
         // 3. Wallet-Setup testen
         console.log('3. Testing wallet setup...');
@@ -24,15 +31,16 @@ async function testConnection() {
         console.log(`✅ Wallet address: ${account.address}\n`);
         
         // 4. ETH Balance prüfen
-        console.log('4. Checking ETH balance...');
+        console.log('4. Checking ETH balance on Base...');
         const ethBalance = await web3.eth.getBalance(account.address);
         const ethBalanceInEth = web3.utils.fromWei(ethBalance, 'ether');
         console.log(`💰 ETH Balance: ${ethBalanceInEth} ETH`);
         
-        if (parseFloat(ethBalanceInEth) < 0.001) {
-            console.log('⚠️  Warning: Low ETH balance might not be sufficient for gas fees\n');
+        // Base hat niedrigere Gas-Kosten als Ethereum Mainnet
+        if (parseFloat(ethBalanceInEth) < 0.0001) {
+            console.log('⚠️  Warning: Very low ETH balance - consider adding more for gas fees\n');
         } else {
-            console.log('✅ ETH balance looks good\n');
+            console.log('✅ ETH balance looks good for Base transactions\n');
         }
         
         // 5. Token Contract testen
@@ -89,7 +97,7 @@ async function testConnection() {
         // 6. Setup Summary
         console.log('🎉 Setup Test Complete!');
         console.log('📋 Summary:');
-        console.log(`   - Network: Connected to block ${blockNumber}`);
+        console.log(`   - Network: ${networkName} (Block ${blockNumber})`);
         console.log(`   - Wallet: ${account.address}`);
         console.log(`   - ETH Balance: ${ethBalanceInEth} ETH`);
         console.log(`   - Token Contract: ${tokenAddress}`);

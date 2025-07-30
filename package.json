@@ -1,7 +1,7 @@
 {
   "name": "token-transfer-webhook",
   "version": "1.0.0",
-  "description": "Automatischer Token-Transfer-Service über Webhooks",
+  "description": "Automatischer Token-Transfer-Service über Webhooks auf Base Chain",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
@@ -20,8 +20,10 @@
   "keywords": [
     "webhook",
     "token-transfer",
-    "ethereum",
-    "erc20"
+    "base-chain",
+    "erc20",
+    "layer2",
+    "coinbase"
   ],
   "author": "",
   "license": "MIT"

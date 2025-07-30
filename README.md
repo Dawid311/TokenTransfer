@@ -1,13 +1,14 @@
 # TokenTransfer
 
-Eine Node.js-Anwendung, die automatisch ERC-20 Tokens über Webhooks versendet.
+Eine Node.js-Anwendung, die automatisch ERC-20 Tokens über Webhooks auf der Base Chain versendet.
 
 ## Features
 
 - 🔗 Webhook-Endpunkt für automatische Token-Transfers
+- ⛓️ Base Chain Integration (Coinbase's Layer 2)
 - 🔐 Sichere Private Key Verwaltung über Umgebungsvariablen
 - 💰 ERC-20 Token Support (konfiguriert für Token mit 2 Dezimalstellen)
-- ⛽ Automatische Gas-Schätzung und -Optimierung
+- ⛽ Automatische Gas-Schätzung und -Optimierung (Base-optimiert)
 - 📊 Balance-Check und Health-Check Endpunkte
 - 🛡️ Input-Validierung und Fehlerbehandlung
 
@@ -28,7 +29,7 @@ cp .env.example .env
 ```
 
 Bearbeiten Sie `.env` und setzen Sie:
-- `RPC_URL`: Ihre Ethereum RPC URL (z.B. Alchemy, Infura)
+- `RPC_URL`: Base Chain RPC URL (z.B. https://mainnet.base.org oder Alchemy/Infura Base)
 - `PRIVATE_KEY`: Der private Key Ihres Wallets (ohne 0x Präfix)
 - `PORT`: Server Port (Standard: 3000)
 
@@ -107,9 +108,12 @@ Health-Check Endpunkt für Monitoring.
 
 ## Token-Konfiguration
 
-Die Anwendung ist für folgenden Token konfiguriert:
+Die Anwendung ist für folgenden Token auf Base Chain konfiguriert:
 - **Adresse:** `0x69eFD833288605f320d77eB2aB99DDE62919BbC1`
 - **Dezimalstellen:** 2
+- **Network:** Base Chain (Chain ID: 8453)
+
+📖 **Weitere Base Chain Informationen:** Siehe [BASE_SETUP.md](./BASE_SETUP.md)
 
 ## Sicherheitshinweise
 
