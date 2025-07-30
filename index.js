@@ -116,18 +116,20 @@ app.post('/transfer-token', async (req, res) => {
             .estimateGas({ from: account.address });
 
         // Transaktion vorbereiten
+        const gasPrice = process.env.GAS_PRICE ? 
+            web3.utils.toWei(process.env.GAS_PRICE, 'gwei') : 
+            await web3.eth.getGasPrice();
+
         const tx = {
             from: account.address,
             to: TOKEN_ADDRESS,
             data: tokenContract.methods.transfer(wallet, tokenAmount).encodeABI(),
-            gas: Math.floor(gasEstimate * 1.2), // 20% Puffer
-            gasPrice: process.env.GAS_PRICE ? 
-                web3.utils.toWei(process.env.GAS_PRICE, 'gwei') : 
-                await web3.eth.getGasPrice()
+            gas: Math.floor(Number(gasEstimate) * 1.2), // 20% Puffer, explizite Number-Konvertierung
+            gasPrice: gasPrice.toString() // Explizite String-Konvertierung
         };
 
         // Transaktion signieren und senden
-        const signedTx = await web3.eth.accounts.signTransaction(tx, privateKey);
+        const signedTx = await web3.eth.accounts.signTransaction(tx, '0x' + privateKey);
         const receipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
 
         console.log(`Transaktion erfolgreich: ${receipt.transactionHash}`);
@@ -137,8 +139,8 @@ app.post('/transfer-token', async (req, res) => {
             transactionHash: receipt.transactionHash,
             amount: amount,
             recipient: wallet,
-            gasUsed: receipt.gasUsed.toString(),
-            blockNumber: receipt.blockNumber.toString()
+            gasUsed: Number(receipt.gasUsed).toString(),
+            blockNumber: Number(receipt.blockNumber).toString()
         });
 
     } catch (error) {
@@ -163,7 +165,7 @@ app.get('/balance', async (req, res) => {
             success: true,
             address: account.address,
             balance: readableBalance,
-            rawBalance: balance
+            rawBalance: balance.toString()
         });
     } catch (error) {
         console.error('Fehler beim Balance-Check:', error);

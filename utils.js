@@ -17,12 +17,15 @@ function isValidPrivateKey(privateKey) {
 
 // Hilfsfunktion zur Formatierung von Token-Amounts
 function formatTokenAmount(amount, decimals = 2) {
-    return (parseFloat(amount) * Math.pow(10, decimals)).toString();
+    const result = (parseFloat(amount) * Math.pow(10, decimals)).toString();
+    return result;
 }
 
 // Hilfsfunktion zur Konvertierung von Token-Amounts zurück zu lesbarem Format
 function parseTokenAmount(amount, decimals = 2) {
-    return parseFloat(amount) / Math.pow(10, decimals);
+    // Explizite Konvertierung zu Number um BigInt-Probleme zu vermeiden
+    const numAmount = typeof amount === 'bigint' ? Number(amount) : parseFloat(amount);
+    return numAmount / Math.pow(10, decimals);
 }
 
 // Hilfsfunktion zur Überprüfung der erforderlichen Umgebungsvariablen
