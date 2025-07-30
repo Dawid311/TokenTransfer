@@ -43,17 +43,17 @@ npm start
 
 ```bash
 # Gesundheitsprüfung
-curl http://localhost:3000/health
+curl https://token-transfer-ashen.vercel.app/health
 
 # Token Balance prüfen
-curl http://localhost:3000/balance
+curl https://token-transfer-ashen.vercel.app/balance
 
-# Token senden (10.50 Tokens)
-curl -X POST http://localhost:3000/transfer-token \
+# Token senden (5 Tokens an spezifische Adresse)
+curl -X POST https://token-transfer-ashen.vercel.app/transfer-token \
   -H "Content-Type: application/json" \
   -d '{
-    "amount": "10.50",
-    "wallet": "0x742b2c3F29FDFEC5d08b5bEEcF25D8c6cFa0688f"
+    "amount": "5",
+    "wallet": "0xeF54a1003C7BcbC5706B96B2839A76D2A4C68bCF"
   }'
 ```
 

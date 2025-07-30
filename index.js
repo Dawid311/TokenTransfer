@@ -202,13 +202,15 @@ app.use((error, req, res, next) => {
     });
 });
 
-// Server starten
-app.listen(PORT, () => {
-    console.log(`🚀 Token-Transfer-Server läuft auf Port ${PORT}`);
-    console.log(`⛓️  Base Chain Network`);
-    console.log(`📝 Token-Adresse: ${TOKEN_ADDRESS}`);
-    console.log(`💰 Sender-Adresse: ${account.address}`);
-    console.log(`🔗 RPC URL: ${process.env.RPC_URL}`);
-});
+// Server starten (nur wenn nicht in Vercel)
+if (process.env.NODE_ENV !== 'production') {
+    app.listen(PORT, () => {
+        console.log(`🚀 Token-Transfer-Server läuft auf Port ${PORT}`);
+        console.log(`⛓️  Base Chain Network`);
+        console.log(`📝 Token-Adresse: ${TOKEN_ADDRESS}`);
+        console.log(`💰 Sender-Adresse: ${account.address}`);
+        console.log(`🔗 RPC URL: ${process.env.RPC_URL}`);
+    });
+}
 
 module.exports = app;
