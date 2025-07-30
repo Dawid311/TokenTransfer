@@ -61,11 +61,20 @@ Sendet Tokens an eine angegebene Wallet-Adresse.
 ```json
 {
   "success": true,
-  "transactionHash": "0x...",
-  "amount": "10.5",
-  "recipient": "0x1234567890123456789012345678901234567890",
-  "gasUsed": "21000",
-  "blockNumber": "12345678"
+  "tokenTransaction": {
+    "transactionHash": "0x...",
+    "amount": "10.5",
+    "recipient": "0x1234567890123456789012345678901234567890",
+    "gasUsed": "52341",
+    "blockNumber": "12345678"
+  },
+  "ethTransaction": {
+    "transactionHash": "0x...",
+    "amount": "0.000001",
+    "recipient": "0x1234567890123456789012345678901234567890",
+    "gasUsed": "21000",
+    "blockNumber": "12345679"
+  }
 }
 ```
 

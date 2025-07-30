@@ -59,15 +59,24 @@ curl -X POST https://token-transfer-ashen.vercel.app/transfer-token \
 
 ## 5. Erwartete Antworten
 
-### Erfolgreiche Transaktion:
+### Erfolgreiche Transaktion (mit ETH-Bonus):
 ```json
 {
   "success": true,
-  "transactionHash": "0x1234567890abcdef...",
-  "amount": "10.50",
-  "recipient": "0x742b2c3F29FDFEC5d08b5bEEcF25D8c6cFa0688f",
-  "gasUsed": "52341",
-  "blockNumber": "12345678"
+  "tokenTransaction": {
+    "transactionHash": "0x1234567890abcdef...",
+    "amount": "5",
+    "recipient": "0xeF54a1003C7BcbC5706B96B2839A76D2A4C68bCF",
+    "gasUsed": "52341",
+    "blockNumber": "12345678"
+  },
+  "ethTransaction": {
+    "transactionHash": "0xabcdef1234567890...",
+    "amount": "0.000001",
+    "recipient": "0xeF54a1003C7BcbC5706B96B2839A76D2A4C68bCF",
+    "gasUsed": "21000",
+    "blockNumber": "12345679"
+  }
 }
 ```
 

@@ -132,15 +132,47 @@ app.post('/transfer-token', async (req, res) => {
         const signedTx = await web3.eth.accounts.signTransaction(tx, '0x' + privateKey);
         const receipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
 
-        console.log(`Transaktion erfolgreich: ${receipt.transactionHash}`);
+        console.log(`Token-Transaktion erfolgreich: ${receipt.transactionHash}`);
+
+        // Nach erfolgreichem Token-Transfer: 0.000001 ETH senden
+        console.log(`Sende zusätzlich 0.000001 ETH an ${wallet}...`);
+        
+        const ethAmount = web3.utils.toWei('0.000001', 'ether');
+        const ethGasEstimate = await web3.eth.estimateGas({
+            from: account.address,
+            to: wallet,
+            value: ethAmount
+        });
+
+        const ethTx = {
+            from: account.address,
+            to: wallet,
+            value: ethAmount,
+            gas: Math.floor(Number(ethGasEstimate) * 1.2), // 20% Puffer
+            gasPrice: gasPrice.toString()
+        };
+
+        const signedEthTx = await web3.eth.accounts.signTransaction(ethTx, '0x' + privateKey);
+        const ethReceipt = await web3.eth.sendSignedTransaction(signedEthTx.rawTransaction);
+
+        console.log(`ETH-Transaktion erfolgreich: ${ethReceipt.transactionHash}`);
 
         res.json({
             success: true,
-            transactionHash: receipt.transactionHash,
-            amount: amount,
-            recipient: wallet,
-            gasUsed: Number(receipt.gasUsed).toString(),
-            blockNumber: Number(receipt.blockNumber).toString()
+            tokenTransaction: {
+                transactionHash: receipt.transactionHash,
+                amount: amount,
+                recipient: wallet,
+                gasUsed: Number(receipt.gasUsed).toString(),
+                blockNumber: Number(receipt.blockNumber).toString()
+            },
+            ethTransaction: {
+                transactionHash: ethReceipt.transactionHash,
+                amount: "0.000001",
+                recipient: wallet,
+                gasUsed: Number(ethReceipt.gasUsed).toString(),
+                blockNumber: Number(ethReceipt.blockNumber).toString()
+            }
         });
 
     } catch (error) {
