@@ -32,7 +32,7 @@ npm install
 cp .env.example .env
 # Bearbeiten Sie .env mit Ihren Werten
 
-# 3. Setup testen
+# 3. Setup teste
 node test-setup.js
 
 # 4. Server starten
