@@ -110,6 +110,10 @@ app.post('/transfer-token', async (req, res) => {
         // Amount in Token-Units konvertieren (mit 2 Decimals)
         const tokenAmount = parseAmount(amount);
 
+        // Aktuelle Nonce abrufen
+        const currentNonce = await web3.eth.getTransactionCount(account.address, 'pending');
+        console.log(`Verwende Nonce: ${currentNonce} für Token-Transaktion`);
+
         // Gas-Schätzung für die Transaktion
         const gasEstimate = await tokenContract.methods
             .transfer(wallet, tokenAmount)
@@ -125,14 +129,20 @@ app.post('/transfer-token', async (req, res) => {
             to: TOKEN_ADDRESS,
             data: tokenContract.methods.transfer(wallet, tokenAmount).encodeABI(),
             gas: Math.floor(Number(gasEstimate) * 1.2), // 20% Puffer, explizite Number-Konvertierung
-            gasPrice: gasPrice.toString() // Explizite String-Konvertierung
+            gasPrice: gasPrice.toString(), // Explizite String-Konvertierung
+            nonce: currentNonce
         };
 
         // Transaktion signieren und senden
+        console.log(`Sende Token-Transaktion mit Nonce ${currentNonce}...`);
         const signedTx = await web3.eth.accounts.signTransaction(tx, '0x' + privateKey);
         const receipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
 
         console.log(`Token-Transaktion erfolgreich: ${receipt.transactionHash}`);
+
+        // Warten auf Bestätigung der Token-Transaktion vor ETH-Transfer
+        console.log('Warte auf Token-Transaktion-Bestätigung...');
+        await new Promise(resolve => setTimeout(resolve, 2000)); // 2 Sekunden warten
 
         // Nach erfolgreichem Token-Transfer: 0.000001 ETH senden
         console.log(`Sende zusätzlich 0.000001 ETH an ${wallet}...`);
@@ -144,14 +154,20 @@ app.post('/transfer-token', async (req, res) => {
             value: ethAmount
         });
 
+        // Nächste Nonce für ETH-Transaktion
+        const ethNonce = currentNonce + 1;
+        console.log(`Verwende Nonce: ${ethNonce} für ETH-Transaktion`);
+
         const ethTx = {
             from: account.address,
             to: wallet,
             value: ethAmount,
             gas: Math.floor(Number(ethGasEstimate) * 1.2), // 20% Puffer
-            gasPrice: gasPrice.toString()
+            gasPrice: gasPrice.toString(),
+            nonce: ethNonce
         };
 
+        console.log(`Sende ETH-Transaktion mit Nonce ${ethNonce}...`);
         const signedEthTx = await web3.eth.accounts.signTransaction(ethTx, '0x' + privateKey);
         const ethReceipt = await web3.eth.sendSignedTransaction(signedEthTx.rawTransaction);
 
