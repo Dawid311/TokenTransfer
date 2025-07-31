@@ -34,5 +34,5 @@ curl -X POST http://localhost:3000/transfer-token \
 curl -X POST http://localhost:3000/transfer-token \
   -H "Content-Type: application/json" \
   -d '{
-    "amount": "10"
+    "amount": "5"
   }'
