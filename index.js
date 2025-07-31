@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const { Web3 } = require('web3');
+const TransactionQueue = require('./queue');
 const { 
     isValidEthereumAddress, 
     formatTokenAmount, 
@@ -69,6 +70,16 @@ const ERC20_ABI = [
 // Token Contract Instanz
 const tokenContract = new web3.eth.Contract(ERC20_ABI, TOKEN_ADDRESS);
 
+// Transaction Queue initialisieren
+const transactionQueue = new TransactionQueue(web3, tokenContract, account, privateKey);
+
+// Queue starten (nur wenn nicht in Vercel)
+if (process.env.NODE_ENV !== 'production') {
+    transactionQueue.startQueue().catch(error => {
+        console.error('❌ Fehler beim Starten der Transaction Queue:', error.message);
+    });
+}
+
 // Hilfsfunktionen
 function validateAddress(address) {
     return isValidEthereumAddress(address);
@@ -78,7 +89,7 @@ function parseAmount(amount, decimals = TOKEN_DECIMALS) {
     return formatTokenAmount(amount, decimals);
 }
 
-// Webhook-Endpunkt für Token-Transfer
+// Webhook-Endpunkt für Token-Transfer (fügt zur Queue hinzu)
 app.post('/transfer-token', async (req, res) => {
     try {
         const { amount, wallet } = req.body;
@@ -105,84 +116,25 @@ app.post('/transfer-token', async (req, res) => {
             });
         }
 
-        console.log(`Token-Transfer initiiert: ${amount} Tokens an ${wallet}`);
+        console.log(`Token-Transfer zur Queue hinzugefügt: ${amount} Tokens an ${wallet}`);
 
-        // Amount in Token-Units konvertieren (mit 2 Decimals)
-        const tokenAmount = parseAmount(amount);
-
-        // Gas-Schätzung für die Transaktion
-        const gasEstimate = await tokenContract.methods
-            .transfer(wallet, tokenAmount)
-            .estimateGas({ from: account.address });
-
-        // Transaktion vorbereiten
-        const gasPrice = process.env.GAS_PRICE ? 
-            web3.utils.toWei(process.env.GAS_PRICE, 'gwei') : 
-            await web3.eth.getGasPrice();
-
-        const tx = {
-            from: account.address,
-            to: TOKEN_ADDRESS,
-            data: tokenContract.methods.transfer(wallet, tokenAmount).encodeABI(),
-            gas: Math.floor(Number(gasEstimate) * 1.2), // 20% Puffer, explizite Number-Konvertierung
-            gasPrice: gasPrice.toString() // Explizite String-Konvertierung
-        };
-
-        // Transaktion signieren und senden
-        const signedTx = await web3.eth.accounts.signTransaction(tx, '0x' + privateKey);
-        const receipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
-
-        console.log(`Token-Transaktion erfolgreich: ${receipt.transactionHash}`);
-
-        // Nach erfolgreichem Token-Transfer: 0.000001 ETH senden
-        console.log(`Sende zusätzlich 0.000001 ETH an ${wallet}...`);
-        
-        const ethAmount = web3.utils.toWei('0.000001', 'ether');
-        const ethGasEstimate = await web3.eth.estimateGas({
-            from: account.address,
-            to: wallet,
-            value: ethAmount
-        });
-
-        const ethTx = {
-            from: account.address,
-            to: wallet,
-            value: ethAmount,
-            gas: Math.floor(Number(ethGasEstimate) * 1.2), // 20% Puffer
-            gasPrice: gasPrice.toString()
-        };
-
-        const signedEthTx = await web3.eth.accounts.signTransaction(ethTx, '0x' + privateKey);
-        const ethReceipt = await web3.eth.sendSignedTransaction(signedEthTx.rawTransaction);
-
-        console.log(`ETH-Transaktion erfolgreich: ${ethReceipt.transactionHash}`);
+        // Zur Transaction Queue hinzufügen
+        const result = await transactionQueue.addTransaction(amount, wallet);
 
         res.json({
             success: true,
-            tokenTransaction: {
-                transactionHash: receipt.transactionHash,
-                amount: amount,
-                recipient: wallet,
-                gasUsed: Number(receipt.gasUsed).toString(),
-                blockNumber: Number(receipt.blockNumber).toString()
-            },
-            ethTransaction: {
-                transactionHash: ethReceipt.transactionHash,
-                amount: "0.000001",
-                recipient: wallet,
-                gasUsed: Number(ethReceipt.gasUsed).toString(),
-                blockNumber: Number(ethReceipt.blockNumber).toString()
-            }
+            message: 'Transaktion wurde zur Verarbeitungsqueue hinzugefügt',
+            queueResult: result,
+            amount: amount,
+            wallet: wallet
         });
 
     } catch (error) {
-        console.error('Fehler beim Token-Transfer:', error);
-        
-        const errorMessage = handleWeb3Error(error);
+        console.error('Fehler beim Hinzufügen zur Token-Transfer-Queue:', error);
         
         res.status(500).json({
             success: false,
-            error: errorMessage
+            error: error.message
         });
     }
 });
@@ -217,6 +169,42 @@ app.get('/health', (req, res) => {
         tokenAddress: TOKEN_ADDRESS,
         senderAddress: account.address
     });
+});
+
+// Queue-Status Endpunkt
+app.get('/queue/status', async (req, res) => {
+    try {
+        const status = await transactionQueue.getQueueStatus();
+        res.json({
+            success: true,
+            queue: status
+        });
+    } catch (error) {
+        console.error('Fehler beim Abrufen des Queue-Status:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Manueller Queue-Trigger Endpunkt
+app.post('/queue/process', async (req, res) => {
+    try {
+        // Trigger queue processing manually
+        transactionQueue.processQueue();
+        
+        res.json({
+            success: true,
+            message: 'Queue-Verarbeitung manuell gestartet'
+        });
+    } catch (error) {
+        console.error('Fehler beim manuellen Queue-Trigger:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
 });
 
 // 404 Handler

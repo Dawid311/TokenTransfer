@@ -44,6 +44,18 @@ function validateEnvironmentVariables() {
     if (!isValidEthereumAddress(process.env.TOKEN_CONTRACT_ADDRESS)) {
         throw new Error('Ungültige Token-Adresse in TOKEN_CONTRACT_ADDRESS Umgebungsvariable');
     }
+
+    // Google Sheets Validierung
+    const hasServiceAccount = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
+    const hasApiKey = process.env.GOOGLE_API_KEY;
+    
+    if (!hasServiceAccount && !hasApiKey) {
+        throw new Error('Google Sheets Authentifizierung fehlt: GOOGLE_SERVICE_ACCOUNT_JSON oder GOOGLE_API_KEY erforderlich');
+    }
+    
+    if (!process.env.GOOGLE_SPREADSHEET_ID) {
+        throw new Error('GOOGLE_SPREADSHEET_ID Umgebungsvariable ist erforderlich');
+    }
 }
 
 // Error Handler für spezifische Web3-Fehler
